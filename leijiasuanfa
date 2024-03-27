@@ -1,0 +1,143 @@
+#include <iostream>
+#include <windows.h>
+#include<fstream>
+using namespace std;
+const long long int N = 4194304;//(2^22)
+long long int mysum;
+double c[N];
+//初始化
+void initData(int n)
+{
+    for (long long int i = 0; i < N; i++)
+    {
+        c[i] = i - 500000;
+    }
+}
+
+void sumOrdinary(int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        mysum += c[i];
+    }
+}
+
+void g_my(int n)
+{
+    for (int i = 0; i < n; i += 2)
+    {
+        mysum += c[i];
+        mysum += c[i + 1];
+    }
+}
+
+
+void sumpro1(int n)
+{
+    // 多路链式
+    long long int mysum1 = 0, mysum2 = 0;
+    for (long long int i = 0; i < n; i += 2)
+    {
+        mysum1 += c[i];
+        mysum2 += c[i + 1];
+    }
+    mysum = mysum1 + mysum2;
+}
+
+void sumpro1_1(int n)
+{
+    // 多路链式
+    long long int mysum1 = 0, mysum2 = 0,mysum3 = 0,mysum4 = 0;
+    for (long long int i = 0; i < n; i += 4)
+    {
+        mysum1 += c[i];
+        mysum2 += c[i + 1];
+        mysum3 += c[i + 2];
+        mysum4 += c[i + 3];
+    }
+    mysum = mysum1 + mysum2 + mysum3 + mysum4 ;
+}
+void sumpro2(int n)
+{
+    //递归函数，优点是简单，缺点是递归函数调用开销较大
+    if (n == 1)
+        return;
+    else
+    {
+        for (int i = 0; i < n / 2; i++)
+        {
+            c[i] += c[n - i - 1];
+        }
+        n = n / 2;
+        sumpro2(n);
+    }
+}
+
+
+void sumpro3(int n)
+{
+    //二重循环实现递归
+    for (long long int m = n; m > 1; m /= 2)
+    {
+        for (long long int i = 0; i < m / 2; i++)
+        {
+            c[i] = c[i * 2] + c[i * 2 + 1];
+        }
+    }
+}
+
+void writeToCSV(ofstream& outputFile, int n, int counter, double seconds, double average_seconds) {
+
+    // 检查文件是否成功打开
+    if (!outputFile) {
+        cout << "无法打开文件！" << endl;
+        return;
+    }
+
+    // 将数据以空格分隔的形式写入CSV文件
+    outputFile << n << ',' << counter << ',' << seconds << ',' << average_seconds << endl;
+    outputFile.flush();
+}
+
+int main()
+{
+    long long counter;// 记录次数
+    double seconds;
+    long long start, end, freq, noww;
+    initData(N);
+    string filename = "output.csv";
+    ofstream outputFile(filename, ios::app);
+    outputFile << "n,counter,seconds,average_seconds\n";
+    for (long long int n = 2; n <= 4194304; n = n * 2)
+    {
+        QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+        QueryPerformanceCounter((LARGE_INTEGER*)&start);//开始计时
+
+        counter = 0;
+        while (true)
+        {
+            QueryPerformanceCounter((LARGE_INTEGER*)&noww);
+            if ((noww - start) * 1000.0 / freq > 10)
+                break;
+            //sumOrdinary(n);
+            //sumpro1(n);
+            //sumpro1_1(n);
+            //sumpro2(n);
+            sumpro3(n);
+            counter++;
+        }
+        QueryPerformanceCounter((LARGE_INTEGER*)&end);//结束计时
+        seconds = (end - start) * 1000.0 / freq;//单位 ms
+        double average_seconds = seconds / counter;
+
+        //输出结果
+        cout << n << ' ' << counter << ' ' << seconds << ' ' << seconds / counter << endl;
+        //cout << seconds / counter << endl ;
+        writeToCSV(outputFile, n, counter, seconds, average_seconds);
+
+    }
+    outputFile.close();
+    cout << "CSV文件已更新。" << endl;
+
+    return 0;
+}
