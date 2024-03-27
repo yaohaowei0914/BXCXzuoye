@@ -1,0 +1,120 @@
+#include <windows.h>
+#include<iostream>
+#include <fstream>
+using namespace std;
+
+const int N = 10000;
+const int BlockSize = 64;
+
+double matrix[N][N], vector[N], resultVector[N];
+
+//初始化
+void initializeData(int n)
+{
+    for (int i = 0; i < N; i++)
+    {
+        for (int j = 0; j < N; j++)
+        {
+            matrix[i][j] = i + j;//初始化矩阵
+        }
+        vector[i] = i;//初始化向量
+    }
+}
+
+void mMVOrdinary(int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        resultVector[i] = 0.0;
+        for (int j = 0; j < n; j++)
+        {
+            resultVector[i] += matrix[j][i] * vector[j];
+        }
+    }
+}
+
+void mMVOptimized(int n)
+{
+    for (int i = 0; i < n; i++)
+    {
+        resultVector[i] = 0.0;
+    }
+    for (int j = 0; j < n; j++)
+    {
+        for (int i = 0; i < n; i++)
+        {
+            resultVector[i] += matrix[j][i] * vector[j];
+        }
+    }
+
+}
+
+void mMVBlock(int n) {
+    for (int i = 0; i < n; i++)
+    {
+        resultVector[i] = 0.0;
+    }
+    for (int i = 0; i < n; i += BlockSize) {
+        for (int j = 0; j < n; j += BlockSize) {
+            // 对每个64x64子矩阵
+            for (int k = 0; k < BlockSize; ++k) {
+                // 执行乘法运算
+                for (int l = 0; l < BlockSize; ++l) {
+                    resultVector[i + k] += matrix[i + k][j + l] * vector[j + l];
+                }
+            }
+        }
+    }
+}
+void writeToCSV(ofstream& outputFile, int n, int counter, double seconds, double average_seconds) {
+
+    // 检查文件是否成功打开
+    if (!outputFile) {
+        cout << "无法打开文件！" << endl;
+        return;
+    }
+
+    // 将数据以空格分隔的形式写入CSV文件
+    outputFile << n << ',' << counter << ',' << seconds << ',' << average_seconds << endl;
+    outputFile.flush();
+}
+int main()
+{
+    int n;
+    long long counter;// 记录次数
+    double seconds;
+    long long startTime, endTime, freq, curr;
+    initializeData(N);
+    int step = 1000000;
+    //string filename = "output.csv";
+    //ofstream outputFile(filename, ios::app);
+    //outputFile << "n,counter,seconds,average_seconds\n";
+    for (int n = 4096; n <= 10000; n += step)
+    {
+        QueryPerformanceFrequency((LARGE_INTEGER*)&freq);
+        QueryPerformanceCounter((LARGE_INTEGER*)&startTime);//开始计时
+        counter = 0;
+        while (true)
+        {
+            QueryPerformanceCounter((LARGE_INTEGER*)&curr);
+            if ((curr - startTime) * 1000.0 / freq > 10)
+                break;
+            //mMVOrdinary(n);//执行函数
+           //mMVOptimized(n);
+            mMVBlock(n);
+            counter++;
+        }
+        QueryPerformanceCounter((LARGE_INTEGER*)&endTime);//结束计时
+        seconds = (endTime - startTime) * 1000.0 / freq;//单位 ms
+        double average_seconds = seconds / counter;
+        //输出结果
+        cout << n << ' ' << counter << ' ' << seconds << ' ' << seconds / counter << endl;
+        //writeToCSV(outputFile, n, counter, seconds, average_seconds);
+
+        if (n >= 1000)
+            step = 100000;
+    }
+    //outputFile.close();
+    //cout << "CSV文件已更新。" << endl;
+    return 0;
+}
